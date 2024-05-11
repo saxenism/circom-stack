@@ -22,11 +22,14 @@ template StackEquality(max_depth) {
     isPOP = isEq.out;
     isPOP * (1 - isPOP) === 0;
 
+    // If the POP instruction exists when the current_pointer is at 0, then that is an invalid state 
+    // and our circuit mus revert then.
+    var outAndVar = (check_index == -1 && isPOP == 1) ? 0 : 1;
+
     if(isPOP == 1) {
         check_index = check_index - 1;
     }
 
-    var outAndVar = 1;
     component isEqual[max_depth + 1];
     for(var i = 0; i < max_depth; i++) {
         isEqual[i] = IsEqual();
@@ -59,6 +62,10 @@ template StackEquality(max_depth) {
     out <== isValid;
 }
 
+template StackInsertion(max_depth) {
+
+}
+
 template StackOperation(max_depth) {
     signal input stack_state_1[max_depth];
     signal input stack_state_2[max_depth];
@@ -67,7 +74,7 @@ template StackOperation(max_depth) {
     
     signal output next_index; // We want this out signal to represent the next (correct) position of the current_index
     signal output out; // We want this *out signal* to represent if the given state transition was actually valid or not
-    
+
     // Compare equality of stack_state_1 and stack_state_2 upto the curr_pointer
     // **THIS COMPONENT DOES NOT CHECK THE INVALID CASE OF CALLING POP ON EMPTY STACK**
     component stackEquality = StackEquality(max_depth);
@@ -75,6 +82,8 @@ template StackOperation(max_depth) {
     stackEquality.stack_state_2 <== stack_state_2;
     stackEquality.current_pointer <== current_pointer;
     stackEquality.instruction <== instruction;
+
+    
 
     next_index <== stackEquality.next_index;
     out <== stackEquality.out;
