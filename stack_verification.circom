@@ -8,9 +8,6 @@ template StackEquality(max_depth) {
     signal input current_pointer;
     signal input instruction;
 
-    log("SE: Current_Pointer: ", current_pointer);
-    log("SE: Instruction ", instruction);
-
     signal output out; // This *out signal* represents if the stack was equal upto the correct current_pointer
     signal output next_index;
 
@@ -29,9 +26,6 @@ template StackEquality(max_depth) {
         check_index = check_index - 1;
     }
 
-    log("SE: Can it detect POP instruction correctly: ", isPOP);
-    log("SE: Can it reduce check_index correctly: (Should be 1 less than current_pointer", current_pointer, check_index);
-
     var outAndVar = 1;
     component isEqual[max_depth + 1];
     for(var i = 0; i < max_depth; i++) {
@@ -43,7 +37,6 @@ template StackEquality(max_depth) {
         // Since we only care about the equality of the stacks uptil the check_index
         if(i <= check_index) {
             outAndVar = outAndVar && isEqual[i].out;
-            log(outAndVar);
         }
     }
 
@@ -72,9 +65,9 @@ template StackOperation(max_depth) {
     signal input current_pointer;
     signal input instruction;
     
-    signal output out; // We want this *out signal* to represent if the given state transition was actually valid or not
     signal output next_index; // We want this out signal to represent the next (correct) position of the current_index
-
+    signal output out; // We want this *out signal* to represent if the given state transition was actually valid or not
+    
     // Compare equality of stack_state_1 and stack_state_2 upto the curr_pointer
     // **THIS COMPONENT DOES NOT CHECK THE INVALID CASE OF CALLING POP ON EMPTY STACK**
     component stackEquality = StackEquality(max_depth);
@@ -83,10 +76,8 @@ template StackOperation(max_depth) {
     stackEquality.current_pointer <== current_pointer;
     stackEquality.instruction <== instruction;
 
-    log("StackEquality output in StackOperation: ", stackEquality.out); // This is wrong, it should have been 1, but it is coming out to be 0.
-    out <== stackEquality.out;
-
     next_index <== stackEquality.next_index;
+    out <== stackEquality.out;
 }
 
 template StackVerification(n, max_depth) {
@@ -141,7 +132,6 @@ template StackVerification(n, max_depth) {
         }
     }
     curr_index[0] <-- current_index;
-    log("Current index in the first round has been set to: ", curr_index[0]);
     
     // curr_index[0] and max_depth and constraint isEq.out === 0, then after compilation you'll see non-linear constraints as 0.
     // Now we need to constraint that the current_value is not greater than or equal to the max_depth (since we count from 0)
@@ -162,13 +152,11 @@ template StackVerification(n, max_depth) {
 
         stOp[i].stack_state_1 <== stack_states[i];
         stOp[i].stack_state_2 <== stack_states[i+1];
-        log("Inside of og for loop, curr_index: ", curr_index[i]);
         stOp[i].current_pointer <== curr_index[i];
         stOp[i].instruction <== instructions[i];
 
         curr_index[i+1] <== stOp[i].next_index;
 
-        log("What is the value of stop[i].out", stOp[i].out); // This is coming out to be 0, it should have been 1.
         outAndVar = outAndVar && stOp[i].out;
     }
 
