@@ -1,6 +1,50 @@
 pragma circom 2.1.6;
 
 include "node_modules/circomlib/circuits/comparators.circom";
+include "node_modules/circomlib/circuits/multiplexer.circom";
+
+template StackInsertion(max_depth) {
+    signal input stack_state[max_depth];
+    signal input current_pointer;
+    signal input instruction;
+
+    signal output out;
+
+    var equality_index = current_pointer;
+    var isPOP;
+
+    component isEq = IsEqual();
+    isEq.in[0] <== instruction;
+    isEq.in[1] <== -1;
+
+    isPOP = isEq.out;
+    isPOP * (1 - isPOP) === 0;
+
+    if(isPOP == 0) {
+        equality_index = equality_index + 1;
+    }
+
+    signal equality_pointer <-- equality_index; // I know this is unsafe, so let's constraint it in the next line
+    component isLessThan = LessThan(252);
+    isLessThan.in[0] <== equality_pointer;
+    isLessThan.in[1] <== max_depth;
+
+    isLessThan.out === 1;
+
+    component multiplexer = Multiplexer(1, max_depth);
+    var random_arr[max_depth][1];
+    for(var i = 0; i < max_depth; i++) {
+        random_arr[i][0] = stack_state[i];
+    }
+
+    component isZero = IsZero();
+
+    multiplexer.inp <== random_arr;
+    multiplexer.sel <== equality_pointer;
+
+    isZero.in <== multiplexer.out[0] - instruction;
+    out <== isZero.out;
+}
 
 template StackEquality(max_depth) {
     signal input stack_state_1[max_depth];
@@ -23,7 +67,7 @@ template StackEquality(max_depth) {
     isPOP * (1 - isPOP) === 0;
 
     // If the POP instruction exists when the current_pointer is at 0, then that is an invalid state 
-    // and our circuit mus revert then.
+    // and our circuit must revert then.
     var outAndVar = (check_index == -1 && isPOP == 1) ? 0 : 1;
 
     if(isPOP == 1) {
@@ -62,10 +106,6 @@ template StackEquality(max_depth) {
     out <== isValid;
 }
 
-template StackInsertion(max_depth) {
-
-}
-
 template StackOperation(max_depth) {
     signal input stack_state_1[max_depth];
     signal input stack_state_2[max_depth];
@@ -83,10 +123,16 @@ template StackOperation(max_depth) {
     stackEquality.current_pointer <== current_pointer;
     stackEquality.instruction <== instruction;
 
-    
+    component stackInsertion = StackInsertion(max_depth);
+    stackInsertion.stack_state <== stack_state_2;
+    stackInsertion.current_pointer <== current_pointer;
+    stackInsertion.instruction <== instruction;
+
+    signal final_out <-- stackEquality.out && stackInsertion.out;
+    final_out * (1 - final_out) === 0;
 
     next_index <== stackEquality.next_index;
-    out <== stackEquality.out;
+    out <== final_out; // We want to make sure both the equality constraint and the correct insertion constraint hold
 }
 
 template StackVerification(n, max_depth) {
