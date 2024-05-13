@@ -225,20 +225,6 @@ template StackVerification(n, max_depth) {
 component main { public [ instructions, stack_states ] } = StackVerification(2, 4);
 
 /* INPUT = {
-    "instructions":[-1, -1],
-    "stack_states":[[2,3,234, -1],[2, 3,-1, -1],[2, -1,-1, -1]]
+    "instructions":[-1, 12],
+    "stack_states":[[2,3,234, -1],[2, 3,-1, -1],[2, 3, 12, -1]]
 } */
-
-/*
-    What do we need to do after deciding the input signals?
-    1. Well we need to figure out if it's a PUSH or a POP
-    2. If it's a PUSH, we need to figure out if the stack_state[i] -> stack_state[i+1] is valid or not
-    3. How do we accomplish 2 ?
-    4. We probably need a variable that acts as the curr_index pointer.
-    5. The curr_index pointer will help us in determining three things:
-    a. Is a POP operation legal
-    b. Is the correct stack entry made at the correct index.
-    c. Are the entries upto the curr_index equal in stack_state[i] and stack_state[i+1]
-    d. TENTATIVE: We can also use (or constraint maybe) the fact that between
-        stack_stats[i] -> stack_states[i+1] the curr_pointer moves by 1 depending on the instruction_type.
-*/
