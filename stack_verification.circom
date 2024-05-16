@@ -2,6 +2,7 @@ pragma circom 2.1.6;
 
 include "node_modules/circomlib/circuits/comparators.circom";
 include "node_modules/circomlib/circuits/multiplexer.circom";
+include "node_modules/circomlib/circuits/gates.circom";
 
 template StackInsertion(max_depth) {
     signal input stack_state[max_depth];
@@ -199,7 +200,7 @@ template StackVerification(n, max_depth) {
     // Since now we correctly found the curr_index, we need to start checking if the transitions are correct or not
     
     // Our intention is to do and AND of all stOp output values and if if comes out to be 0, then the passed stack state transitions are invalid.                   
-    var outAndVar = 1;
+    signal multiANDArray[n];
     
     component stOp[n];
     for(var i = 0; i < n; i++) {
@@ -212,14 +213,13 @@ template StackVerification(n, max_depth) {
 
         curr_index[i+1] <== stOp[i].next_index;
 
-        outAndVar = outAndVar && stOp[i].out;
+        multiANDArray[i] <== stOp[i].out;
     }
 
-    signal isValid;
-    isValid <-- outAndVar;
-    isValid * (1-isValid) === 0;
+    component multiAND = MultiAND(n);
+    multiAND.in <== multiANDArray;
 
-    out <== isValid;
+    out <== multiAND.out;
 }
 
 component main { public [ instructions, stack_states ] } = StackVerification(2, 4);
