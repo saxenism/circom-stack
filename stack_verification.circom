@@ -4,6 +4,15 @@ include "node_modules/circomlib/circuits/comparators.circom";
 include "node_modules/circomlib/circuits/multiplexer.circom";
 include "node_modules/circomlib/circuits/gates.circom";
 
+template IfElse() {
+  signal input cond;
+  signal input L;
+  signal input R;
+  signal output out;
+
+  out <== cond * (L - R) + R;
+}
+
 template StackInsertion(max_depth) {
     signal input stack_state[max_depth];
     signal input current_pointer;
@@ -55,7 +64,6 @@ template StackEquality(max_depth) {
     signal output next_index;
 
     var isPOP;
-    var check_index = current_pointer;
 
     // The instruction that is in question, would be a POP instruction iff the instruction == field_size - 1
     component isEq = IsEqual();
@@ -66,35 +74,48 @@ template StackEquality(max_depth) {
     isPOP * (1 - isPOP) === 0;
 
     // If the POP instruction exists when the current_pointer is at 0, then that is an invalid state 
-    // So, isPOP == 1 && check_index == -1 should be reverted.
+    // So, isPOP == 1 && current_pointer == -1 should be reverted.
     component isZero[2];
 
     isZero[0] = IsZero();
     isZero[1] = IsZero();
     
-    isZero[0].in <== check_index + 1;
+    isZero[0].in <== current_pointer + 1;
     isZero[1].in <== isPOP - 1;
 
     isZero[0].out * isZero[1].out === 0;
 
-    if(isPOP == 1) {
-        check_index = check_index - 1;
-    }
+    signal inst_is_pop <== isPOP * (current_pointer - 1);
+    signal inst_is_push <== (1 - isPOP) * current_pointer;
+    signal check_index <== inst_is_pop + inst_is_push;
 
     signal comp_array[max_depth];
     component isEqual[max_depth];
+    component isLET[max_depth];
+    component ifElse[max_depth];
     
     for(var i = 0; i < max_depth; i++) {
         isEqual[i] = IsEqual();
+        isLET[i] = LessEqThan(252);
+        ifElse[i] = IfElse();
 
         isEqual[i].in[0] <== stack_state_1[i];
         isEqual[i].in[1] <== stack_state_2[i];
 
+        isLET[i].in[0] <== i;
+        isLET[i].in[1] <== check_index;
+
         // Since we only care about the equality of the stacks uptil the check_index
         // We will take the correct values upto check_index and post that make all values 1.
-        comp_array[i] <-- (i > check_index) ? 1 : isEqual[i].out;
-        comp_array[i] * (1 - comp_array[i]) === 0;
+        ifElse[i].cond <== isLET[i].out;
+        ifElse[i].L <== isEqual[i].out;
+        ifElse[i].R <== 1;
+
+        comp_array[i] <== ifElse[i].out;
     }
+
+    component multiAND = MultiAND(max_depth);
+    multiAND.in <== comp_array;
 
     signal instruction_is_pop <== isPOP * (current_pointer - 1);
     signal instruction_is_push <== (1 - isPOP) * (current_pointer + 1);
@@ -107,10 +128,6 @@ template StackEquality(max_depth) {
     isLE.in[1] <== max_depth;
 
     isLE.out === 1;    
-
-    component multiAND = MultiAND(max_depth);
-    multiAND.in <== comp_array;
-
     out <== multiAND.out;
 }
 
