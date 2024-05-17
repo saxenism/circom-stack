@@ -11,7 +11,6 @@ template StackInsertion(max_depth) {
 
     signal output out;
 
-    var equality_index = current_pointer;
     var isPOP;
 
     component isEq = IsEqual();
@@ -21,16 +20,15 @@ template StackInsertion(max_depth) {
     isPOP = isEq.out;
     isPOP * (1 - isPOP) === 0;
 
-    if(isPOP == 0) {
-        equality_index = equality_index + 1;
-    }
+    signal instruction_is_pop <== isPOP * current_pointer;
+    signal instruction_is_push <== (isPOP - 1) * (current_pointer + 1);
 
-    signal equality_pointer <-- equality_index; // I know this is unsafe, so let's constraint it in the next line
+    signal equality_pointer <==  instruction_is_pop - instruction_is_push;
     component isLessThan = LessThan(252);
     isLessThan.in[0] <== equality_pointer;
     isLessThan.in[1] <== max_depth;
 
-    isLessThan.out === 1;
+    isLessThan.out === 1; // Constraining the equality_pointer to be less than the max_depth
 
     component multiplexer = Multiplexer(1, max_depth);
     var random_arr[max_depth][1];
@@ -58,6 +56,7 @@ template StackEquality(max_depth) {
 
     var isPOP;
     var check_index = current_pointer;
+    var next_index_var;
 
     // The instruction that is in question, would be a POP instruction iff the instruction == field_size - 1
     component isEq = IsEqual();
@@ -73,6 +72,9 @@ template StackEquality(max_depth) {
 
     if(isPOP == 1) {
         check_index = check_index - 1;
+        next_index_var = current_pointer - 1;
+    } else {
+        next_index_var = current_pointer + 1;
     }
 
     component isEqual[max_depth + 1];
@@ -93,7 +95,7 @@ template StackEquality(max_depth) {
     isValid * (1 - isValid) === 0;
 
     signal next_curr_index;
-    next_curr_index <-- check_index;
+    next_curr_index <-- next_index_var;
 
     next_index <== next_curr_index;
 
@@ -222,9 +224,9 @@ template StackVerification(n, max_depth) {
     out <== multiAND.out;
 }
 
-component main { public [ instructions, stack_states ] } = StackVerification(2, 4);
+component main { public [ instructions, stack_states ] } = StackVerification(3, 5);
 
 /* INPUT = {
-    "instructions":[-1, 12],
-    "stack_states":[[2,3,234, -1],[2, 3,-1, -1],[2, 3, 12, -1]]
+    "instructions":[1, 12, -1],
+    "stack_states":[[2,3,234, -1,-1],[2, 3,234, 1,-1],[2, 3, 234, 1, 12],[2, 3, 234, 1, -1]]
 } */
