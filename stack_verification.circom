@@ -21,9 +21,9 @@ template StackInsertion(max_depth) {
     isPOP * (1 - isPOP) === 0;
 
     signal instruction_is_pop <== isPOP * current_pointer;
-    signal instruction_is_push <== (isPOP - 1) * (current_pointer + 1);
+    signal instruction_is_push <== (1 - isPOP) * (current_pointer + 1);
 
-    signal equality_pointer <==  instruction_is_pop - instruction_is_push;
+    signal equality_pointer <==  instruction_is_pop + instruction_is_push;
     component isLessThan = LessThan(252);
     isLessThan.in[0] <== equality_pointer;
     isLessThan.in[1] <== max_depth;
@@ -56,7 +56,6 @@ template StackEquality(max_depth) {
 
     var isPOP;
     var check_index = current_pointer;
-    var next_index_var;
 
     // The instruction that is in question, would be a POP instruction iff the instruction == field_size - 1
     component isEq = IsEqual();
@@ -72,9 +71,6 @@ template StackEquality(max_depth) {
 
     if(isPOP == 1) {
         check_index = check_index - 1;
-        next_index_var = current_pointer - 1;
-    } else {
-        next_index_var = current_pointer + 1;
     }
 
     component isEqual[max_depth + 1];
@@ -94,10 +90,10 @@ template StackEquality(max_depth) {
     isValid <-- outAndVar;
     isValid * (1 - isValid) === 0;
 
-    signal next_curr_index;
-    next_curr_index <-- next_index_var;
+    signal instruction_is_pop <== isPOP * (current_pointer - 1);
+    signal instruction_is_push <== (1 - isPOP) * (current_pointer + 1);
 
-    next_index <== next_curr_index;
+    next_index <== instruction_is_pop + instruction_is_push;
 
     // Doing a range check for next_index
     component isLE = LessThan(252);
