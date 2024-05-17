@@ -66,8 +66,18 @@ template StackEquality(max_depth) {
     isPOP * (1 - isPOP) === 0;
 
     // If the POP instruction exists when the current_pointer is at 0, then that is an invalid state 
-    // and our circuit must revert then.
-    var outAndVar = (check_index == -1 && isPOP == 1) ? 0 : 1;
+    // So, isPOP == 1 && check_index == -1 should be reverted.
+    component isZero[2];
+
+    isZero[0] = IsZero();
+    isZero[1] = IsZero();
+    
+    isZero[0].in <== check_index + 1;
+    isZero[1].in <== isPOP - 1;
+
+    isZero[0].out * isZero[1].out === 0;
+
+    var outAndVar = 1;
 
     if(isPOP == 1) {
         check_index = check_index - 1;
@@ -86,10 +96,6 @@ template StackEquality(max_depth) {
         }
     }
 
-    signal isValid;
-    isValid <-- outAndVar;
-    isValid * (1 - isValid) === 0;
-
     signal instruction_is_pop <== isPOP * (current_pointer - 1);
     signal instruction_is_push <== (1 - isPOP) * (current_pointer + 1);
 
@@ -101,6 +107,10 @@ template StackEquality(max_depth) {
     isLE.in[1] <== max_depth;
 
     isLE.out === 1;
+
+    signal isValid;
+    isValid <-- outAndVar;
+    isValid * (1 - isValid) === 0;
 
     out <== isValid;
 }
