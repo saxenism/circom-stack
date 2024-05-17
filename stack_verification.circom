@@ -81,8 +81,8 @@ template StackEquality(max_depth) {
         check_index = check_index - 1;
     }
 
-    var outAndVar = 1;
-    component isEqual[max_depth + 1];
+    signal comp_array[max_depth];
+    component isEqual[max_depth];
     
     for(var i = 0; i < max_depth; i++) {
         isEqual[i] = IsEqual();
@@ -91,9 +91,9 @@ template StackEquality(max_depth) {
         isEqual[i].in[1] <== stack_state_2[i];
 
         // Since we only care about the equality of the stacks uptil the check_index
-        if(i <= check_index) {
-            outAndVar = outAndVar && isEqual[i].out;
-        }
+        // We will take the correct values upto check_index and post that make all values 1.
+        comp_array[i] <-- (i > check_index) ? 1 : isEqual[i].out;
+        comp_array[i] * (1 - comp_array[i]) === 0;
     }
 
     signal instruction_is_pop <== isPOP * (current_pointer - 1);
@@ -106,13 +106,12 @@ template StackEquality(max_depth) {
     isLE.in[0] <== next_index;
     isLE.in[1] <== max_depth;
 
-    isLE.out === 1;
+    isLE.out === 1;    
 
-    signal isValid;
-    isValid <-- outAndVar;
-    isValid * (1 - isValid) === 0;
+    component multiAND = MultiAND(max_depth);
+    multiAND.in <== comp_array;
 
-    out <== isValid;
+    out <== multiAND.out;
 }
 
 template StackOperation(max_depth) {
