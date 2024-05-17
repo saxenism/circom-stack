@@ -159,7 +159,7 @@ template StackOperation(max_depth) {
     out <== stackEquality.out * stackInsertion.out; 
 }
 
-template StackVerification(n, max_depth) {
+template StackVerification(n, max_depth, current_index) {
     /*
         We expect an input of different states of a stack 
         Those states should correspond to the stack instruction input
@@ -198,31 +198,16 @@ template StackVerification(n, max_depth) {
     // We create n+1 curr_index signals to track the current index for n+1 stacks
     signal curr_index[n+1]; 
 
-    var field_size = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-    var current_index = 0;  
+    // We need to constraint that the current_index is not greater than or equal to the max_depth (since we count from 0)
+    curr_index[0] <== current_index;
+    component isLT = LessThan(252);
+    isLT.in[0] <== curr_index[0];
+    isLT.in[1] <== max_depth;
 
-    // For the initial index pointer, we need only the first stack_state and check the first instance of -1 being present in the stack.
-    var current_value = max_depth;
-    for(var i = 0; i < max_depth; i++) {
-        current_value = stack_states[0][i];
-        if (current_value == -1 || current_value == field_size - 1) {
-            current_index = (i - 1);
-            i = max_depth - 1;
-        }
-    }
-    curr_index[0] <-- current_index;
-    
-    // curr_index[0] and max_depth and constraint isEq.out === 0, then after compilation you'll see non-linear constraints as 0.
-    // Now we need to constraint that the current_value is not greater than or equal to the max_depth (since we count from 0)
-    component isEq = IsEqual();
-    isEq.in[0] <== curr_index[0];
-    isEq.in[1] <== max_depth;
+    isLT.out === 1;
 
-    isEq.out === 0;
-
-    // Since now we correctly found the curr_index, we need to start checking if the transitions are correct or not
-    
-    // Our intention is to do and AND of all stOp output values and if if comes out to be 0, then the passed stack state transitions are invalid.                   
+    // Now we need to start checking if the transitions are correct or not
+    // Our intention is to do and AND of all stOp output values and if it comes out to be 0, then the passed stack state transitions are invalid.                   
     signal multiANDArray[n];
     
     component stOp[n];
@@ -245,7 +230,7 @@ template StackVerification(n, max_depth) {
     out <== multiAND.out;
 }
 
-component main { public [ instructions, stack_states ] } = StackVerification(3, 5);
+component main { public [ instructions, stack_states ] } = StackVerification(3, 5, 2);
 
 /* INPUT = {
     "instructions":[1, 12, -1],
