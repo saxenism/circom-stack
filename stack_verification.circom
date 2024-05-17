@@ -77,13 +77,13 @@ template StackEquality(max_depth) {
 
     isZero[0].out * isZero[1].out === 0;
 
-    var outAndVar = 1;
-
     if(isPOP == 1) {
         check_index = check_index - 1;
     }
 
+    var outAndVar = 1;
     component isEqual[max_depth + 1];
+    
     for(var i = 0; i < max_depth; i++) {
         isEqual[i] = IsEqual();
 
