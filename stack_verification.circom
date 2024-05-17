@@ -131,11 +131,10 @@ template StackOperation(max_depth) {
     stackInsertion.current_pointer <== current_pointer;
     stackInsertion.instruction <== instruction;
 
-    signal final_out <-- stackEquality.out && stackInsertion.out;
-    final_out * (1 - final_out) === 0;
-
     next_index <== stackEquality.next_index;
-    out <== final_out; // We want to make sure both the equality constraint and the correct insertion constraint hold
+    // We want to make sure both the equality constraint and the correct insertion constraint hold
+    // Ideally we would have done an AND of both values but since both values are binary, multiplying them would have the same result
+    out <== stackEquality.out * stackInsertion.out; 
 }
 
 template StackVerification(n, max_depth) {
